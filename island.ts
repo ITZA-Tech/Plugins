@@ -12,7 +12,7 @@ for await (
 ) {
   if (!file.isFile) throw new Error(`${file.path} is not a file`);
 
-  if ((await Deno.readTextFile(file.path)).startsWith("'use client'")) {
+  if ((await Deno.readTextFile(file.path)).match("['\"]use client['\"]")) {
     islands.add(fileUrl(file.path));
   }
 }

@@ -1,1 +1,1 @@
-export { default } from "./island.ts";
+export { default as islands } from "./island.ts";

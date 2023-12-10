@@ -1,23 +1,33 @@
 import { Plugin } from "$fresh/server.ts";
 import fileUrl from "npm:file-url";
-import { expandGlob } from "std/fs/expand_glob.ts";
+import { yellow } from "std/fmt/colors.ts";
+import { expandGlobSync } from "std/fs/expand_glob.ts";
 
-const islands = new Set<string>();
-const denoJson = JSON.parse(Deno.readTextFileSync("deno.json"));
+export default function islands(): Plugin {
+  const start = performance.now();
+  const islands = new Set<string>();
+  const denoJson = JSON.parse(Deno.readTextFileSync("deno.json"));
+  const decoder = new TextDecoder();
 
-for await (
-  const file of expandGlob("**/*.tsx", {
+  const files = expandGlobSync("**/*.tsx", {
     exclude: denoJson.exclude ?? [],
-  })
-) {
-  if (!file.isFile) throw new Error(`${file.path} is not a file`);
-
-  if ((await Deno.readTextFile(file.path)).match(/['"]use client['"]/)) {
-    islands.add(fileUrl(file.path));
+  });
+  for (const file of files) {
+    const of = Deno.openSync(file.path);
+    const buffer = new Uint8Array(11);
+    Deno.readSync(of.rid, buffer);
+    if (decoder.decode(buffer.slice(1)) === "use client") {
+      islands.add(fileUrl(file.path));
+    }
+    Deno.close(of.rid);
   }
-}
 
-export default function (): Plugin {
+  console.log(
+    yellow(
+      `\u26A1 Found ${islands.size} islands in ${Math.floor(performance.now() - start)}ms`,
+    ),
+  );
+
   return {
     name: "@island",
     islands: {
